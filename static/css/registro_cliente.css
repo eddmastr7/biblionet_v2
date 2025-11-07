@@ -1,0 +1,177 @@
+/* ===== ESTILOS ESPECÍFICOS PARA REGISTRO ===== */
+:root {
+    --primary-color: #0d6efd;   /* Azul principal (Bootstrap / logo) */
+    --accent-color: #0dfd8d;    /* Verde del logo */
+    --text-dark: #212529;
+    --text-light: #6c757d;
+}
+
+/* Fondo general de la sección */
+.register-section {
+    padding: 4rem 0;
+    background: linear-gradient(135deg, #0dfd8d 0%, #544ba2 100%);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+}
+
+/* Tarjeta del formulario */
+.register-card {
+    background: white;
+    border-radius: 1rem;
+    padding: 3rem;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e5e7eb;
+}
+
+/* Encabezado */
+.register-header {
+    text-align: center;
+    margin-bottom: 2.5rem;
+}
+
+.register-section::before {
+    background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+}
+
+.register-title {
+    font-size: 2.25rem;
+    font-weight: 700;
+    color: var(--text-dark);
+    margin-bottom: 0.5rem;
+}
+
+.register-subtitle {
+    color: var(--text-light);
+    font-size: 1.1rem;
+}
+
+/* ===== FORMULARIO ===== */
+.register-form {
+    margin-top: 1.5rem;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-label {
+    font-weight: 600;
+    color: var(--text-dark);
+    margin-bottom: 0.5rem;
+    display: block;
+}
+
+.form-control-lg {
+    padding: 0.875rem 1rem;
+    border: 2px solid #e5e7eb;
+    border-radius: 0.75rem;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+}
+
+.form-control-lg:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(44, 90, 160, 0.1);
+    outline: none;
+}
+
+.form-text {
+    font-size: 0.875rem;
+    color: var(--text-light);
+    margin-top: 0.25rem;
+}
+
+/* ===== CHECKBOX ===== */
+.form-check-input {
+    width: 1.1em;
+    height: 1.1em;
+    margin-top: 0.2em;
+    border: 2px solid #e5e7eb;
+}
+
+.form-check-input:checked {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.form-check-label {
+    color: var(--text-dark);
+    font-size: 0.95rem;
+}
+
+/* ===== ENLACES ===== */
+.text-link {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.3s ease;
+}
+
+.text-link:hover {
+    color: #1e3a8a;
+    text-decoration: underline;
+}
+
+/* ===== BOTÓN REGISTRO ===== */
+.btn-register {
+    display: block;
+    width: 100%;
+    text-align: center;
+    background: linear-gradient(135deg, var(--primary-color) 0%, #1e3a8a 100%);
+    border: none;
+    color: white;
+    font-weight: 600;
+    padding: 1rem 2rem;
+    border-radius: 0.75rem;
+    font-size: 1.1rem;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.btn-register:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(13, 110, 253, 0.3);
+    color: white;
+}
+
+/* Enlace de login */
+.register-login-link {
+    color: var(--text-light);
+    font-size: 1rem;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+    .register-section {
+        padding: 2rem 0;
+    }
+    
+    .register-card {
+        padding: 2rem 1.5rem;
+        margin: 0 1rem;
+    }
+    
+    .register-title {
+        font-size: 1.75rem;
+    }
+    
+    .register-subtitle {
+        font-size: 1rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .register-card {
+        padding: 1.5rem 1rem;
+    }
+    
+    .form-control-lg {
+        padding: 0.75rem 0.875rem;
+    }
+
+    .btn-register {
+        font-size: 1rem;
+        padding: 0.9rem 1rem;
+    }
+}

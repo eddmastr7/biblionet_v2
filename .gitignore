@@ -1,0 +1,38 @@
+﻿# --- Python / Django ---
+__pycache__/
+*.py[cod]
+*.log
+*.egg-info/
+db.sqlite3
+media/
+staticfiles/
+.env
+.env.*
+*.bak
+
+# Virtual envs
+.venv/
+venv/
+ENV/
+env/
+
+# Django migrations (deja los __init__.py)
+**/migrations/**/
+!**/migrations/__init__.py
+
+# --- Node/Frontend ---
+node_modules/
+dist/
+build/
+.cache/
+*.map
+
+# --- IDE/OS ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# OneDrive temp
+~$*

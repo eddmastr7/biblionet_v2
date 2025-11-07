@@ -1,0 +1,142 @@
+-- Creación de la base de datos y usuario
+CREATE DATABASE IF NOT EXISTS biblionet CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER IF NOT EXISTS 'biblio'@'127.0.0.1' IDENTIFIED BY 'Proyecto1';
+GRANT ALL PRIVILEGES ON biblionet.* TO 'biblio'@'127.0.0.1';
+FLUSH PRIVILEGES;
+USE biblionet;
+
+-- =========================
+-- TABLAS DE SEGURIDAD
+-- =========================
+
+CREATE TABLE roles (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(50) NOT NULL UNIQUE,
+    descripcion VARCHAR(255)
+);
+
+CREATE TABLE permisos (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    modulo VARCHAR(100) NOT NULL,
+    accion VARCHAR(100) NOT NULL,
+    descripcion VARCHAR(255)
+);
+
+CREATE TABLE rol_permiso (
+    rol_id INT,
+    permiso_id INT,
+    PRIMARY KEY (rol_id, permiso_id),
+    FOREIGN KEY (rol_id) REFERENCES roles(id) ON DELETE CASCADE,
+    FOREIGN KEY (permiso_id) REFERENCES permisos(id) ON DELETE CASCADE
+);
+
+CREATE TABLE usuarios (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    rol_id INT NOT NULL,
+    nombre VARCHAR(100) NOT NULL,
+    apellido VARCHAR(100) NOT NULL,
+    email VARCHAR(150) NOT NULL UNIQUE,
+    clave VARCHAR(255) NOT NULL,
+    estado VARCHAR(20) DEFAULT 'activo',
+    fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (rol_id) REFERENCES roles(id)
+);
+
+CREATE TABLE bitacora (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    usuario_id INT,
+    accion VARCHAR(255) NOT NULL,
+    fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE SET NULL
+);
+
+-- =========================
+-- TABLAS DE CLIENTES Y LIBROS
+-- =========================
+
+CREATE TABLE clientes (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    usuario_id INT,
+    dni VARCHAR(20) NOT NULL UNIQUE,
+    direccion VARCHAR(255),
+    telefono VARCHAR(20),
+    estado VARCHAR(20) DEFAULT 'activo',
+    FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE SET NULL
+);
+
+CREATE TABLE libros (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    isbn VARCHAR(20) NOT NULL UNIQUE,
+    titulo VARCHAR(255) NOT NULL,
+    autor VARCHAR(255) NOT NULL,
+    categoria VARCHAR(100),
+    editorial VARCHAR(150),
+    anio_publicacion YEAR,
+    stock_total INT DEFAULT 0,
+    portada VARCHAR(255),
+    fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE ejemplares (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    libro_id INT NOT NULL,
+    codigo_interno VARCHAR(50) UNIQUE,
+    ubicacion VARCHAR(100),
+    estado VARCHAR(20) DEFAULT 'disponible',
+    FOREIGN KEY (libro_id) REFERENCES libros(id) ON DELETE CASCADE
+);
+
+-- =========================
+-- TABLAS DE PRÉSTAMOS Y RESERVAS
+-- =========================
+
+CREATE TABLE reglas_prestamo (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    plazo_dias INT NOT NULL,
+    limite_prestamos INT NOT NULL,
+    tarifa_mora_diaria DECIMAL(10,2) NOT NULL,
+    descripcion VARCHAR(255),
+    fecha_actualizacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE prestamos (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    cliente_id INT NOT NULL,
+    ejemplar_id INT NOT NULL,
+    fecha_inicio DATE NOT NULL,
+    fecha_fin DATE NOT NULL,
+    fecha_devolucion DATE,
+    estado VARCHAR(20) DEFAULT 'activo',
+    FOREIGN KEY (cliente_id) REFERENCES clientes(id),
+    FOREIGN KEY (ejemplar_id) REFERENCES ejemplares(id)
+);
+
+CREATE TABLE reservas (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    cliente_id INT NOT NULL,
+    libro_id INT NOT NULL,
+    fecha_reserva TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    fecha_vencimiento TIMESTAMP,
+    estado VARCHAR(20) DEFAULT 'activa',
+    FOREIGN KEY (cliente_id) REFERENCES clientes(id),
+    FOREIGN KEY (libro_id) REFERENCES libros(id)
+);
+
+-- =========================
+-- VISTA DEL CATÁLOGO
+-- =========================
+
+CREATE OR REPLACE VIEW catalogo_publico AS
+SELECT 
+    l.id AS id_libro,
+    l.titulo,
+    l.autor,
+    l.categoria,
+    l.editorial,
+    l.anio_publicacion,
+    l.portada,
+    COUNT(e.id) AS total_ejemplares,
+    SUM(CASE WHEN e.estado = 'disponible' THEN 1 ELSE 0 END) AS disponibles
+FROM libros l
+LEFT JOIN ejemplares e ON l.id = e.libro_id
+GROUP BY l.id;

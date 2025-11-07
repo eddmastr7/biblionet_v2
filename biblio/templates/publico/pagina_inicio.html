@@ -1,0 +1,190 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BiblioNet - Tu Biblioteca Digital</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/estilos_generales_catalogo.css' %}">
+</head>
+<body>
+  <!-- Navbar Mejorado -->
+  <nav class="navbar navbar-expand-lg navbar-dark navbar-custom">
+    <div class="container">
+      <a class="navbar-brand d-flex align-items-center" href="{% url 'inicio' %}">
+        <img src="{% static 'imagenes/logo.jpg' %}" alt="Logo BiblioNet" width="60" class="me-2 brand-logo">
+        <span class="brand-text">BiblioNet</span>
+      </a>
+
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" 
+              data-bs-target="#navbarPrincipal" aria-controls="navbarPrincipal" 
+              aria-expanded="false" aria-label="Menú de navegación">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      <div class="collapse navbar-collapse justify-content-end" id="navbarPrincipal">
+        <ul class="navbar-nav me-4">
+          <li class="nav-item">
+            <a class="nav-link nav-link-custom active" href="{% url 'inicio' %}">Inicio</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link nav-link-custom" href="{% url 'catalogo' %}">Catálogo</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link nav-link-custom" href="{% url 'acerca_de' %}">Acerca de</a>
+          </li>
+        </ul>
+
+        <div class="d-flex align-items-center">
+          <a href="{% url 'login_cliente' %}" class="btn btn-outline-light btn-nav me-2">Iniciar sesión</a>
+          <a href="{% url 'registro' %}" class="btn btn-accent">Registrarse</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <header class="hero-section">
+    <div class="container">
+      <div class="row align-items-center min-vh-80">
+        <div class="col-lg-6">
+          <h1 class="hero-title">Descubre Tu Próxima Aventura Literaria</h1>
+          <p class="hero-subtitle">Explora miles de libros digitales en nuestra biblioteca online. Desde clásicos atemporales hasta las últimas novedades.</p>
+
+          <!-- Búsqueda -->
+          <form class="search-container" method="get" action="{% url 'catalogo' %}">
+            <div class="input-group search-group">
+              <input type="text" class="form-control search-input" name="q" placeholder="Buscar libros, autores, categorías..." aria-label="Buscar">
+              <button class="btn btn-search" type="submit">
+                <span class="search-icon">🔍</span>
+                Buscar
+              </button>
+            </div>
+            <div class="search-suggestions">
+              <a href="{% url 'fantasia' %}" class="suggestion-tag">Fantasía</a>
+              <a href="{% url 'catalogo' %}?q=romance" class="suggestion-tag">Romance</a>
+              <a href="{% url 'catalogo' %}?q=misterio" class="suggestion-tag">Misterio</a>
+              <a href="{% url 'catalogo' %}?q=ciencia+ficcion" class="suggestion-tag">Ciencia Ficción</a>
+            </div>
+          </form>
+        </div>
+
+        <div class="col-lg-6 text-center">
+          <div class="hero-image">
+            <div class="floating-books">
+              <div class="book book-1">📚</div>
+              <div class="book book-2">📖</div>
+              <div class="book book-3">🔖</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Categorías Destacadas -->
+  <section class="categories-section">
+    <div class="container">
+      <div class="section-header">
+        <h2 class="section-title">Explora por Categorías</h2>
+        <p class="section-subtitle">Encuentra tu próximo libro favorito navegando por nuestras categorías populares</p>
+      </div>
+
+      <div class="row g-4">
+        <div class="col-md-6 col-lg-4">
+          <a href="{% url 'fantasia' %}" class="category-card-link">
+            <div class="category-card fantasy-card">
+              <div class="category-icon">✨</div>
+              <h3 class="category-title">Fantasía</h3>
+              <p class="category-description">Mundos mágicos, criaturas legendarias y aventuras épicas</p>
+              <span class="category-count">Explorar</span>
+            </div>
+          </a>
+        </div>
+
+        <!-- Puedes duplicar para otras categorías apuntando a catalogo?q=... -->
+        <div class="col-md-6 col-lg-4">
+          <a href="{% url 'catalogo' %}?q=terror" class="category-card-link">
+            <div class="category-card horror-card">
+              <div class="category-icon">👻</div>
+              <h3 class="category-title">Terror</h3>
+              <p class="category-description">Historias que pondrán tu piel de gallina</p>
+              <span class="category-count">Explorar</span>
+            </div>
+          </a>
+        </div>
+
+        <div class="col-md-6 col-lg-4">
+          <a href="{% url 'catalogo' %}?q=romance" class="category-card-link">
+            <div class="category-card romance-card">
+              <div class="category-icon">💖</div>
+              <h3 class="category-title">Romance</h3>
+              <p class="category-description">Historias de amor y pasión</p>
+              <span class="category-count">Explorar</span>
+            </div>
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer-custom">
+    <div class="container">
+      <div class="row">
+        <div class="col-lg-4 mb-4">
+          <div class="footer-brand">
+            <img src="{% static 'imagenes/logo.jpg' %}" alt="BiblioNet" width="50" class="me-2">
+            <span class="footer-brand-text">BiblioNet</span>
+          </div>
+          <p class="footer-description">
+            Tu biblioteca digital de confianza con miles de títulos disponibles. 
+            Llevamos la magia de la lectura a tu pantalla.
+          </p>
+        </div>
+        <div class="col-lg-2 col-md-4 mb-4">
+          <h5 class="footer-title">Enlaces</h5>
+          <ul class="footer-links">
+            <li><a href="{% url 'inicio' %}">Inicio</a></li>
+            <li><a href="{% url 'catalogo' %}">Catálogo</a></li>
+            <li><a href="{% url 'acerca_de' %}">Acerca de</a></li>
+          </ul>
+        </div>
+        <div class="col-lg-3 col-md-4 mb-4">
+          <h5 class="footer-title">Categorías</h5>
+          <ul class="footer-links">
+            <li><a href="{% url 'fantasia' %}">Fantasía</a></li>
+            <li><a href="{% url 'catalogo' %}?q=terror">Terror</a></li>
+            <li><a href="{% url 'catalogo' %}?q=suspenso">Suspenso</a></li>
+            <li><a href="{% url 'catalogo' %}?q=romance">Romance</a></li>
+          </ul>
+        </div>
+        <div class="col-lg-3 col-md-4 mb-4">
+          <h5 class="footer-title">Contacto</h5>
+          <div class="footer-contact">
+            <p>📧 info@biblionet.com</p>
+            <p>📞 +1 234 567 890</p>
+            <p>📍 Calle Libros 123, Ciudad</p>
+          </div>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <div class="row align-items-center">
+          <div class="col-md-6">
+            <p class="copyright">&copy; 2025 BiblioNet. Todos los derechos reservados.</p>
+          </div>
+          <div class="col-md-6 text-md-end">
+            <div class="footer-legal">
+              <a href="#">Política de privacidad</a>
+              <a href="#">Términos de servicio</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
