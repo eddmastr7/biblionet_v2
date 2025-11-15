@@ -36,47 +36,61 @@
         </div>
     </nav>
 
-    <main class="main-content">
-        <div class="container-fluid costum_bg_color py-4">
-            <!-- Botones de Historial -->
-            <div class="row history-buttons">
-                <div class="col-md-6 mb-3">
-                    <button class="btn btn-custom-1 w-100 btn-history">
-                        <i class="fas fa-shopping-cart me-2"></i>
-                        Realizar Compra
-                    </button>
+    <header class="header-inventario text-center">
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-lg-8">    
+                    <h1 class="catalog-title">
+                        <i class="fas fa-boxes me-2"></i>
+                         busca y agrega nuevos libros
+                        
+                    </h1>
                 </div>
-                <div class="col-md-6 mb-3">
-                    <a href="#" class="btn w-100 btn-history active">
-                      <i class="fas fa-boxes me-2"></i>
-                      Inventario
-                    </a>
-                </div> 
-
-                <div class="col-md-6 mb-3">
-                    <button class="btn btn-custom-2 w-100 btn-history">
-                        <i class="fas fa-history me-2"></i>
-                       Ventas
-                    </button>
-                </div>
-                <div class="col-md-6 mb-3">
-                    <a href="#" class="btn btn-custom-2 w-100 btn-history">
-                      <i class="fas fa-cash-register me-2"></i>
-                        Realizar Nueva Venta
-                    </a>
-                </div> 
             </div>
         </div>
+    </header>
+
+    <main class="main-content">
+        <div class="container-fluid  py-4">
+            <!-- Botones de Historial -->
+            <div class="row action-buttons">
+                <div class="col-md-3 mb-3">
+                    <a href="{% url 'panel_bibliotecario' %}" class="btn btn-inventario w-100 btn-action">
+                        <i class="fas fa-boxes me-2"></i>
+                        Inicio
+                    </a>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <a href="{% url 'inventario' %}" class="btn btn-inventario w-100 btn-action active">
+                        <i class="fas fa-boxes me-2"></i>
+                        Gestionar Inventario
+                    </a>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <a href="#" class="btn btn-venta w-100 btn-action">
+                        <i class="fas fa-cash-register me-2"></i>
+                        Realizar Venta
+                    </a>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <a href="#" class="btn btn-compra w-100 btn-action">
+                        <i class="fas fa-shopping-cart me-2"></i>
+                        Realizar Compra
+                    </a>
+                </div>
+                <div class="col-md-3 mb-3 mx-auto">
+                    <a href="#" class="btn btn-prestamo w-100 btn-action">
+                        <i class="fas fa-book me-2"></i>
+                        Gestión de prestamos
+                    </a>
+                </div>
+            </div>
         
-        <!-- Contenido principal del inventario -->
+         <!-- Contenido principal del inventario -->
         
         <div class="container mt-4">
             <!-- Encabezado con búsqueda y botón agregar -->
             <div class="d-flex justify-content-between align-items-center mb-4">
-                <a href="{% url 'panel_bibliotecario' %}" class="btn btn-outline-secondary">
-                    <i class="fas fa-arrow-left me-2"></i>
-                    Regresar al Panel
-                </a>
                 <h2 class="mb-0">Inventario de Libros</h2>
                 <button class="btn btn-add-book" data-bs-toggle="modal" data-bs-target="#agregarLibroModal">
                     <i class="fas fa-plus-circle me-2"></i>Agregar Nuevo Libro
@@ -177,10 +191,10 @@
                                     </td>
                                     <td>
                                         <div class="btn-group">
-                                            <button class="btn btn-sm btn-outline-primary" title="Editar">
+                                            <button class="btn btn-sm btn-outline-primary" title="Editar" data-bs-toggle="modal" data-bs-target="#editarLibroModal">
                                                 <i class="fas fa-edit"></i>
                                             </button>
-                                            <button class="btn btn-sm btn-outline-danger" title="Eliminar">
+                                            <button class="btn btn-sm btn-outline-danger" title="Eliminar" data-bs-toggle="modal" data-bs-target="#eliminarLibroModal">
                                                 <i class="fas fa-trash"></i>
                                             </button>
                                         </div>
@@ -277,6 +291,99 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                     <button type="submit" form="formAgregarLibro" class="btn btn-primary">Guardar Libro</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para editar libro -->
+    <div class="modal fade" id="editarLibroModal" tabindex="-1" aria-labelledby="editarLibroModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editarLibroModalLabel">Editar Libro</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="formEditarLibro">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="edit_isbn" class="form-label">ISBN</label>
+                                <input type="text" class="form-control" id="edit_isbn" name="edit_isbn" 
+                                pattern="^\d{13}$" 
+                                title="El ISBN debe contener exactamente 13 dígitos numéricos sin espacios"
+                                 required value="978-84-204-8312-9">
+                                <div class="form-text">Ingrese el código ISBN de 13 dígitos (solo números)</div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="edit_titulo" class="form-label">Título</label>
+                                <input type="text" class="form-control" id="edit_titulo" name="edit_titulo" required value="La Sombra del Viento">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="edit_autor" class="form-label">Autor</label>
+                                <input type="text" class="form-control" id="edit_autor" name="edit_autor" required value="Carlos Ruiz Zafón">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="edit_categoria" class="form-label">Categoría</label>
+                                <select class="form-select" id="edit_categoria" name="edit_categoria" required>
+                                    <option value="">Seleccionar categoría</option>
+                                    <option value="ficcion">Ficción</option>
+                                    <option value="ciencia">Ciencia</option>
+                                    <option value="historia">Historia</option>
+                                    <option value="biografia">Biografía</option>
+                                    <option value="misterio" selected>Misterio</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="edit_editorial" class="form-label">Editorial</label>
+                                <input type="text" class="form-control" id="edit_editorial" name="edit_editorial" required value="Planeta">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="edit_anio_publicacion" class="form-label">Año de Publicación</label>
+                                <input type="number" class="form-control" id="edit_anio_publicacion" name="edit_anio_publicacion" min="1900" max="2024" required value="2001">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="edit_stock" class="form-label">Stock</label>
+                                <input type="number" class="form-control" id="edit_stock" name="edit_stock" min="0" required value="0">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="edit_portada" class="form-label">Portada</label>
+                                <input type="file" class="form-control" id="edit_portada" name="edit_portada" accept="image/*">
+                                <div class="form-text">Seleccione una nueva imagen si desea cambiar la portada</div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" form="formEditarLibro" class="btn btn-primary">Guardar Cambios</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para eliminar libro -->
+    <div class="modal fade" id="eliminarLibroModal" tabindex="-1" aria-labelledby="eliminarLibroModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="eliminarLibroModalLabel">Eliminar Libro</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="formEliminarLibro">
+                        <div class="row">
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="edit_autor" class="form-label">Estas seguro que deseas eliminar este libro</label>
+                            </div>
+                           
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" form="formEliminarLibro" class="btn btn-primary">Eliminar</button>
                 </div>
             </div>
         </div>

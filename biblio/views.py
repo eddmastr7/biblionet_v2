@@ -184,3 +184,6 @@ def cerrar_sesion_cliente(request):
     messages.success(request, "Sesión cerrada correctamente")
     return redirect("inicio_sesion_cliente") 
 
+def lista_reservas_clientes(request):
+    # Sin funcionalidad, solo muestra el template
+    return render(request, 'clientes/lista_reservas_clientes.html')
