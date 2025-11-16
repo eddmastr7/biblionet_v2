@@ -254,7 +254,7 @@ def inventario(request):
             Libros.objects.filter(autor__icontains=query) |
             Libros.objects.filter(isbn__icontains=query) |
             Libros.objects.filter(categoria__icontains=query)
-        ).distinct()
+        ).distinct().order_by('autor','titulo')
     else:
         libros_qs = Libros.objects.all().order_by('titulo')
 
@@ -311,6 +311,12 @@ def inventario(request):
                 libro.portada = portada_file
 
             libro.save()
+
+            Bitacora.objects.create(
+                usuario=usuario_actual, 
+                accion=f"EDITO EL LIBRO: '{libro.titulo}'",
+                fecha=timezone.now()
+            )
 
             messages.success(request, 'Libro actualizado correctamente')
             return redirect('inventario')
