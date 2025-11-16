@@ -187,3 +187,5 @@ def cerrar_sesion_cliente(request):
 def lista_reservas_clientes(request):
     # Sin funcionalidad, solo muestra el template
     return render(request, 'clientes/lista_reservas_clientes.html')
+
+

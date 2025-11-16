@@ -250,3 +250,7 @@ def inventario(request):
 
 
     return render(request, "seguridad/inventario.html", contexto)
+
+#registrar prestamo
+def registrar_prestamo(request):
+    return render(request, "seguridad/registrar_prestamo.html")

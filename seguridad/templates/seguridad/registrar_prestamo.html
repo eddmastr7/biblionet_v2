@@ -1,0 +1,78 @@
+{% extends 'seguridad/bibliotecario_home.html' %}
+{% load static %}
+
+{% block content %}
+
+<link rel="stylesheet" href="{% static 'css/registrar_prestamo.css' %}">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+<!-- ENCABEZADO DE LA SECCIÓN -->
+<div class="encabezado-form">
+    <div class="contenedor-header">
+        <img src="{% static 'imagenes/logo.jpg' %}" class="logo-registro logo-grande" alt="logo">
+
+        <h1 class="titulo-header">
+            <i class="fas fa-book-open me-2"></i> Registrar Préstamo
+        </h1>
+    </div>
+</div>
+
+<!-- CONTENEDOR GENERAL -->
+<div class="contenedor-formulario">
+
+    <div class="tarjeta">
+
+        <div class="row mt-4">
+
+            <!-- CLIENTE -->
+            <div class="col-md-6 mb-4 grupo">
+                <label class="label">Cliente</label>
+                <select class="form-select campo">
+                    <option>Seleccione un cliente activo</option>
+                </select>
+            </div>
+
+            <!-- LIBRO -->
+            <div class="col-md-6 mb-4 grupo">
+                <label class="label">Libro</label>
+                <select class="form-select campo">
+                    <option>Seleccione un libro</option>
+                </select>
+            </div>
+
+            <!-- FECHA INICIO -->
+            <div class="col-md-6 mb-4 grupo">
+                <label class="label">Fecha de Inicio</label>
+                <input type="date" id="fecha_inicio" class="form-control campo">
+            </div>
+
+            <!-- FECHA FIN -->
+            <div class="col-md-6 mb-4 grupo">
+                <label class="label">Fecha de Fin</label>
+                <input type="date" id="fecha_fin" class="form-control campo" readonly>
+            </div>
+
+        </div>
+
+        <div class="text-end mt-4">
+            <button class="btn boton-registrar">
+                <i class="fas fa-save me-2"></i> Registrar Préstamo
+            </button>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    // Calcular fecha fin automáticamente
+    document.getElementById("fecha_inicio").addEventListener("change", function(){
+        let inicio = new Date(this.value);
+        if(!isNaN(inicio)){
+            let fin = new Date(inicio);
+            fin.setDate(fin.getDate() + 15);
+            document.getElementById("fecha_fin").value = fin.toISOString().split("T")[0];
+        }
+    });
+</script>
+
+{% endblock %}
