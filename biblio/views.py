@@ -59,8 +59,6 @@ def registro_cliente(request):
     if request.method == "POST":
         nombre = request.POST.get("nombre","").strip().lower()
         apellido = request.POST.get("apellido","").strip().lower()
-        dni = request.POST.get("dni","").strip()
-        telefono = request.POST.get("telefono","").strip()
         email = request.POST.get("email","").strip().lower()
         password = request.POST.get("password","")
         confirm = request.POST.get("confirm_password","")
@@ -98,9 +96,7 @@ def registro_cliente(request):
                 
                 cliente = Clientes.objects.create(
                     usuario=usuario,
-                    dni=dni,
-                    direccion=email,  
-                    telefono=telefono,
+                    direccion=email,
                     estado="activo"
                 )
 
