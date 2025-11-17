@@ -1,73 +1,91 @@
-{% extends 'seguridad/bibliotecario_home.html' %}
 {% load static %}
 
-{% block content %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<link rel="stylesheet" href="{% static 'css/registrar_prestamo.css' %}">
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <title>Registrar Préstamo - BiblioNet</title>
 
-<!-- ENCABEZADO DE LA SECCIÓN -->
-<div class="encabezado-form">
-    <div class="contenedor-header">
-        <img src="{% static 'imagenes/logo.jpg' %}" class="logo-registro logo-grande" alt="logo">
+    <!-- Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 
-        <h1 class="titulo-header">
-            <i class="fas fa-book-open me-2"></i> Registrar Préstamo
-        </h1>
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <!-- CSS Personal -->
+    <link rel="stylesheet" href="{% static 'css/registrar_prestamo.css' %}">
+</head>
+
+<body>
+
+    <!-- ENCABEZADO -->
+    <div class="prestamo-header mb-4">
+        <img src="{% static 'imagenes/logo.jpg' %}" class="header-logo" alt="logo">
+
+        <div>
+            <h1 class="titulo">Registrar Préstamo</h1>
+            <p class="subtitulo">Complete los datos para registrar un nuevo préstamo</p>
+        </div>
     </div>
-</div>
 
-<!-- CONTENEDOR GENERAL -->
-<div class="contenedor-formulario">
+    <!-- CONTENEDOR PRINCIPAL -->
+    <div class="container">
 
-    <div class="tarjeta">
+        <div class="card shadow-sm p-4 prestamo-card">
 
-        <div class="row mt-4">
+            <h4 class="titulo-seccion mb-4">
+                <i class="fas fa-book-open me-2"></i> Datos del Préstamo
+            </h4>
 
-            <!-- CLIENTE -->
-            <div class="col-md-6 mb-4 grupo">
-                <label class="label">Cliente</label>
-                <select class="form-select campo">
-                    <option>Seleccione un cliente activo</option>
-                </select>
+            <div class="row">
+
+                <!-- CLIENTE -->
+                <div class="col-md-6 mb-4">
+                    <label class="form-label fw-semibold">Cliente</label>
+                    <select class="form-select campo">
+                        <option>Seleccione un cliente activo</option>
+                    </select>
+                </div>
+
+                <!-- LIBRO -->
+                <div class="col-md-6 mb-4">
+                    <label class="form-label fw-semibold">Libro</label>
+                    <select class="form-select campo">
+                        <option>Seleccione un libro</option>
+                    </select>
+                </div>
+
+                <!-- FECHA INICIO -->
+                <div class="col-md-6 mb-4">
+                    <label class="form-label fw-semibold">Fecha de Inicio</label>
+                    <input type="date" id="fecha_inicio" class="form-control campo">
+                </div>
+
+                <!-- FECHA FIN -->
+                <div class="col-md-6 mb-4">
+                    <label class="form-label fw-semibold">Fecha de Fin</label>
+                    <input type="date" id="fecha_fin" class="form-control campo" readonly>
+                </div>
+
             </div>
 
-            <!-- LIBRO -->
-            <div class="col-md-6 mb-4 grupo">
-                <label class="label">Libro</label>
-                <select class="form-select campo">
-                    <option>Seleccione un libro</option>
-                </select>
-            </div>
-
-            <!-- FECHA INICIO -->
-            <div class="col-md-6 mb-4 grupo">
-                <label class="label">Fecha de Inicio</label>
-                <input type="date" id="fecha_inicio" class="form-control campo">
-            </div>
-
-            <!-- FECHA FIN -->
-            <div class="col-md-6 mb-4 grupo">
-                <label class="label">Fecha de Fin</label>
-                <input type="date" id="fecha_fin" class="form-control campo" readonly>
+            <div class="text-end mt-3">
+                <button class="btn btn-primary btn-registrar">
+                    <i class="fas fa-save me-2"></i> Registrar Préstamo
+                </button>
             </div>
 
         </div>
 
-        <div class="text-end mt-4">
-            <button class="btn boton-registrar">
-                <i class="fas fa-save me-2"></i> Registrar Préstamo
-            </button>
-        </div>
-
     </div>
-</div>
 
 <script>
     // Calcular fecha fin automáticamente
-    document.getElementById("fecha_inicio").addEventListener("change", function(){
+    document.getElementById("fecha_inicio").addEventListener("change", function () {
         let inicio = new Date(this.value);
-        if(!isNaN(inicio)){
+        if (!isNaN(inicio)) {
             let fin = new Date(inicio);
             fin.setDate(fin.getDate() + 15);
             document.getElementById("fecha_fin").value = fin.toISOString().split("T")[0];
@@ -75,4 +93,5 @@
     });
 </script>
 
-{% endblock %}
+</body>
+</html>

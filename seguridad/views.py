@@ -1,11 +1,13 @@
 from functools import wraps
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.views.decorators.csrf import csrf_protect
 from django.contrib.auth.hashers import check_password, make_password
 from django.contrib.auth import logout as auth_logout  
 from django.utils import timezone
+from django.contrib import messages
+from django.core.paginator import Paginator
 
-from biblio.models import Usuarios, Roles, Libros, Prestamos, Bitacora
+from biblio.models import Usuarios, Roles, Libros, Prestamos, Bitacora, Libros
 
 # ---------- Helpers de sesión / roles ----------
 def _usuario_autenticado(request):
@@ -239,18 +241,143 @@ def registrar_empleado(request):
 @requerir_rol("bibliotecario")
 
 def inventario(request):
-
+    # Usuario logueado
     usuario_actual = Usuarios.objects.select_related("rol").get(
-    id=request.session.get("id_usuario"))
+        id=request.session.get("id_usuario")
+    )
 
-    
+    # Búsqueda
+    query = request.GET.get('q', '').strip()
+    if query:
+        libros_qs = (
+            Libros.objects.filter(titulo__icontains=query) |
+            Libros.objects.filter(autor__icontains=query) |
+            Libros.objects.filter(isbn__icontains=query) |
+            Libros.objects.filter(categoria__icontains=query)
+        ).distinct().order_by('autor','titulo')
+    else:
+        libros_qs = Libros.objects.all().order_by('titulo')
+
+    # Paginación: 5 libros por página
+    paginator = Paginator(libros_qs, 5)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    # POST: agregar libro
+    if request.method == 'POST' and 'agregar_libro' in request.POST:
+        try:
+            anio_publicacion = str(request.POST.get('anio_publicacion'))
+
+            portada_file = request.FILES.get('portada')  # puede venir vacío
+
+            libro = Libros(
+                isbn=request.POST.get('isbn'),
+                titulo=request.POST.get('titulo'),
+                autor=request.POST.get('autor'),
+                categoria=request.POST.get('categoria'),
+                editorial=request.POST.get('editorial'),
+                anio_publicacion=anio_publicacion,
+                stock_total=request.POST.get('stock', 0),
+                portada=portada_file,            # archivo de imagen
+                fecha_registro=timezone.now(),   # fecha automática
+            )
+            libro.save()
+            messages.success(request, 'Libro agregado correctamente')
+            return redirect('inventario')
+
+        except Exception as e:
+            messages.error(request, f'Error al agregar el libro: {str(e)}')
+            return redirect('inventario')
+
+    # POST: editar libro
+    if request.method == 'POST' and 'editar_libro' in request.POST:
+        try:
+            libro_id = request.POST.get('libro_id')
+            libro = get_object_or_404(Libros, id=libro_id)
+
+            anio_publicacion = str(request.POST.get('anio_publicacion'))
+
+            libro.isbn = request.POST.get('isbn')
+            libro.titulo = request.POST.get('titulo')
+            libro.autor = request.POST.get('autor')
+            libro.categoria = request.POST.get('categoria')
+            libro.editorial = request.POST.get('editorial')
+            libro.anio_publicacion = anio_publicacion
+            libro.stock_total = request.POST.get('stock', 0)
+
+            # Si viene una nueva portada, la reemplazamos
+            portada_file = request.FILES.get('portada')
+            if portada_file:
+                libro.portada = portada_file
+
+            libro.save()
+
+            Bitacora.objects.create(
+                usuario=usuario_actual, 
+                accion=f"EDITO EL LIBRO: '{libro.titulo}'",
+                fecha=timezone.now()
+            )
+
+            messages.success(request, 'Libro actualizado correctamente')
+            return redirect('inventario')
+
+        except Exception as e:
+            messages.error(request, f'Error al actualizar el libro: {str(e)}')
+            return redirect('inventario')
+
     contexto = {
-        "usuario_actual": usuario_actual
+        "usuario_actual": usuario_actual,
+        "page_obj": page_obj,
+        "query": query,
     }
-
 
     return render(request, "seguridad/inventario.html", contexto)
 
 #registrar prestamo
 def registrar_prestamo(request):
     return render(request, "seguridad/registrar_prestamo.html")
+
+@requerir_rol("bibliotecario")
+def historial_cliente(request, cliente_id):
+    # 🔹 Datos de prueba para ver la interfaz
+    cliente = {
+        "id": cliente_id,
+        "nombre": "Ana López",
+        "dni": "45678",
+        "email": "ana@gmail.com"
+    }
+
+    historial = [
+        {
+            "tipo": "Préstamo",
+            "libro": "1984 - George Orwell",
+            "fecha_inicio": "2025-03-10",
+            "fecha_fin": "2025-03-20",
+            "estado": "activo",
+            "mora": "5 días"
+        },
+        {
+            "tipo": "Devolución",
+            "libro": "El Principito",
+            "fecha_inicio": "2025-02-01",
+            "fecha_fin": "2025-02-10",
+            "estado": "devuelto",
+            "mora": "0"
+        },
+        {
+            "tipo": "Reserva",
+            "libro": "Harry Potter y la Piedra Filosofal",
+            "fecha_inicio": "2025-04-05",
+            "fecha_fin": None,
+            "estado": "activa",
+            "mora": "-"
+        },
+    ]
+
+    contexto = {
+        "cliente": cliente,
+        "historial": historial
+    }
+
+    return render(request, "seguridad/historial_cliente.html", contexto)
+

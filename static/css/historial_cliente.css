@@ -1,0 +1,53 @@
+/* ENCABEZADO */
+.historial-header {
+    background: linear-gradient(135deg, #2c5aa0, #27ae60);
+    padding: 22px 30px;
+    border-radius: 18px;
+    display: flex;
+    align-items: center;
+    color: white;
+}
+
+.historial-header .icon {
+    font-size: 2.3rem;
+    margin-right: 15px;
+}
+
+.historial-header h1 {
+    font-size: 2rem;
+    font-weight: 700;
+}
+
+.subtitulo {
+    margin: 0;
+    opacity: 0.85;
+    font-size: 1rem;
+}
+
+/* TARJETAS */
+.card {
+    border-radius: 15px;
+    border: none;
+}
+
+/* TITULOS DE SECCIÓN */
+.titulo-seccion {
+    font-weight: 700;
+    color: #1e3a8a;
+}
+
+/* TABLA */
+.table thead {
+    background: #f1f3f5;
+}
+
+.table th {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    color: #2c3e50;
+    font-weight: 700;
+}
+
+.table-hover tbody tr:hover {
+    background-color: #eef5ff;
+}
