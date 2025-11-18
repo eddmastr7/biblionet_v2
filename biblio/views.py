@@ -4,58 +4,82 @@ from django.contrib import messages
 from django.contrib.auth.hashers import make_password, check_password
 from django.utils import timezone
 from django.db import transaction
-from biblio.models import Usuarios, Roles
+from biblio.models import Usuarios, Roles, Clientes, Libros
 from django.views.decorators.csrf import csrf_protect
+from django.core.paginator import Paginator
 
 def inicio(request):
     # Renderiza tu plantilla: biblio/templates/publico/pagina_inicio.html
     return render(request, "publico/pagina_inicio.html")
 
+from django.core.paginator import Paginator
+from django.shortcuts import render
+from biblio.models import Libros
+
 def catalogo(request):
-    # Soporta búsqueda ?q=...
-    q = (request.GET.get("q") or "").strip().lower()
+    q = (request.GET.get("q") or "").strip()
+    categoria = (request.GET.get("categoria") or "").strip()
+    estado = (request.GET.get("estado") or "").strip()
+    orden = (request.GET.get("orden") or "recientes").strip()
 
-    # Datos de ejemplo mientras conectas a la BD
-    base = [
-        {"titulo": "Harry Potter y la Piedra Filosofal", "autor": "J.K. Rowling", "descripcion": "Un niño descubre que es mago.", "disponible": True,  "imagen_url": ""},
-        {"titulo": "El Señor de los Anillos", "autor": "J.R.R. Tolkien", "descripcion": "La épica del Anillo Único.",        "disponible": False, "imagen_url": ""},
-        {"titulo": "Las Crónicas de Narnia", "autor": "C.S. Lewis",      "descripcion": "Aventuras en Narnia.",             "disponible": True,  "imagen_url": ""},
-    ]
+    # Base
+    libros_qs = Libros.objects.all()
 
+    # Buscar por título o autor
     if q:
-        libros = [l for l in base if q in l["titulo"].lower() or q in l["autor"].lower() or q in (l["descripcion"] or "").lower()]
+        libros_qs = (
+            libros_qs.filter(titulo__icontains=q) |
+            libros_qs.filter(autor__icontains=q)
+        ).distinct()
+
+    # Filtrar por categoría (sin perder lo anterior)
+    if categoria:
+        libros_qs = libros_qs.filter(categoria__icontains=categoria)
+
+    # Filtrar por estado usando stock_total directo
+    if estado == "disponible":
+        libros_qs = libros_qs.filter(stock_total__gt=0)
+    elif estado == "prestado":
+        libros_qs = libros_qs.filter(stock_total__lte=0)
+
+    # Orden
+    if orden == "titulo_asc":
+        libros_qs = libros_qs.order_by("titulo")
+    elif orden == "titulo_desc":
+        libros_qs = libros_qs.order_by("-titulo")
+    elif orden == "autor_asc":
+        libros_qs = libros_qs.order_by("autor", "titulo")
+    elif orden == "antiguos":
+        libros_qs = libros_qs.order_by("anio_publicacion", "titulo")
     else:
-        libros = base
+        libros_qs = libros_qs.order_by("-fecha_registro", "titulo")
+
+    paginator = Paginator(libros_qs, 9)
+    page_number = request.GET.get("page")
+    page_obj = paginator.get_page(page_number)
 
     ctx = {
-        "libros": libros,
-        "total_libros": len(libros),
+        "libros": page_obj.object_list,
+        "page_obj": page_obj,
+        "total_libros": paginator.count,
+        "q": q,
+        "categoria": categoria,
+        "estado": estado,
+        "orden": orden,
     }
-    # biblio/templates/publico/catalogo.html
+
     return render(request, "publico/catalogo.html", ctx)
 
-def catalogo_fantasia(request):
-    # Redirige a /catalogo/?q=fantasia para reutilizar la vista
-    return redirect(f"{reverse('catalogo')}?q=fantasia")
+
 
 def acerca_de(request):
-    # Usa tu placeholder por ahora
-    return render(request, "publico/placeholder.html")
+    clientes_activos=Clientes.objects.filter(estado__iexact="activo").count()
 
-def login_cliente(request):
-    # biblio/templates/publico/login_cliente.html
-    return render(request, "publico/login_cliente.html")
+    contexto = {
+          'clientes_activos': clientes_activos
+    }
 
-def registro(request):
-    # Placeholder temporal para el botón "Registrarse"
-    return render(request, "publico/placeholder.html")
-
-def acerca_de(request):
-    return render(request, "publico/acerca_de.html")
-
-# Stub reutilizable para páginas aún no listas (si no lo tienes ya):
-def placeholder(request):
-    return render(request, "publico/placeholder.html")
+    return render(request, "publico/acerca_de.html", contexto)
 
 
 def _password_ok(raw, stored):
@@ -65,70 +89,67 @@ def _password_ok(raw, stored):
         return check_password(raw, stored)
     return raw == stored
 
-def _usuarios_fieldnames():
-    # Incluye sólo campos concretos (no M2M / reverse)
-    return {
-        f.name for f in Usuarios._meta.get_fields()
-        if getattr(f, "concrete", False) and not getattr(f, "many_to_many", False) and not getattr(f, "one_to_many", False)
-    }
+
 
 # ---------- Registro de cliente ----------
 def registro_cliente(request):
     if request.method == "POST":
-        nombre = request.POST.get("nombre","").strip()
-        apellido = request.POST.get("apellido","").strip()
-        dni = request.POST.get("dni","").strip()
-        telefono = request.POST.get("telefono","").strip()
+        nombre = request.POST.get("nombre","").strip().lower()
+        apellido = request.POST.get("apellido","").strip().lower()
         email = request.POST.get("email","").strip().lower()
         password = request.POST.get("password","")
         confirm = request.POST.get("confirm_password","")
 
-        ctx = {"form": request.POST.copy()}
-
-        # Validaciones mínimas
+        # Validaciones mínimas - usando messages para errores
         if not all([nombre, apellido, email, password, confirm]):
-            ctx["error"] = "Completa todos los campos obligatorios."
-            return render(request, "publico/registro_cliente.html", ctx)
+            messages.error(request, "Completa todos los campos obligatorios.")
+            return render(request, "publico/registro_cliente.html", {"form": request.POST.copy()})
+        
         if len(password) < 8:
-            ctx["error"] = "La contraseña debe tener al menos 8 caracteres."
-            return render(request, "publico/registro_cliente.html", ctx)
+            messages.error(request, "La contraseña debe tener al menos 8 caracteres.")
+            return render(request, "publico/registro_cliente.html", {"form": request.POST.copy()})
+        
         if password != confirm:
-            ctx["error"] = "Las contraseñas no coinciden."
-            return render(request, "publico/registro_cliente.html", ctx)
+            messages.error(request, "Las contraseñas no coinciden.")
+            return render(request, "publico/registro_cliente.html", {"form": request.POST.copy()})
+        
         if Usuarios.objects.filter(email=email).exists():
-            ctx["error"] = "Ya existe una cuenta con ese correo."
-            return render(request, "publico/registro_cliente.html", ctx)
+            messages.error(request, "Ya existe una cuenta con ese correo.")
+            return render(request, "publico/registro_cliente.html", {"form": request.POST.copy()})
 
         # Crear usuario cliente
-        with transaction.atomic():
-            rol, _ = Roles.objects.get_or_create(nombre="cliente")
-            kwargs = dict(
-                rol=rol,
-                nombre=nombre,
-                apellido=apellido,
-                email=email,
-                clave=make_password(password),
-                estado="activo",
-            )
-            # Si tu modelo Usuarios tiene estos campos, se asignan; si no, omite estas líneas
-            if hasattr(Usuarios, "dni"):
-                kwargs["dni"] = dni
-            if hasattr(Usuarios, "telefono"):
-                kwargs["telefono"] = telefono
+        try:
+            with transaction.atomic():
+                rol, _ = Roles.objects.get_or_create(nombre="cliente")
+                
+                usuario = Usuarios.objects.create(
+                    rol=rol,
+                    nombre=nombre,
+                    apellido=apellido,
+                    email=email,
+                    clave=make_password(password),
+                    estado="activo"
+                )
+                
+                cliente = Clientes.objects.create(
+                    usuario=usuario,
+                    direccion=email,
+                    estado="activo"
+                )
 
-            usuario = Usuarios.objects.create(**kwargs)
-
-        # Auto-login (sesión pública de cliente)
-        request.session["cliente_id"] = usuario.id
-        request.session["cliente_email"] = usuario.email
-        messages.success(request, "¡Cuenta creada con éxito!")
-        return redirect("catalogo")
+            request.session["cliente_id"] = cliente.id
+            request.session["cliente_email"] = usuario.email
+            messages.success(request, "¡Cuenta creada con éxito! Ahora puedes iniciar sesión.")
+            return redirect("inicio_sesion_cliente")
+            
+        except Exception as e:
+            messages.error(request, f"Error al crear la cuenta: {str(e)}")
+            return render(request, "publico/registro_cliente.html", {"form": request.POST.copy()})
 
     return render(request, "publico/registro_cliente.html")
 
-
 @csrf_protect
-def login_cliente(request):
+def inicio_sesion_cliente(request):
     ctx = {}
     if request.method == "POST":
         email = request.POST.get("email","").strip().lower()
@@ -138,10 +159,16 @@ def login_cliente(request):
             user = Usuarios.objects.select_related("rol").get(
                 email=email, rol__nombre="cliente", estado="activo"
             )
-        except Usuarios.DoesNotExist:
-            ctx["error"] = "Correo o contraseña incorrectos."
-            return render(request, "publico/login_cliente.html", ctx)
+            cliente = Clientes.objects.get(usuario=user)
 
+        except Usuarios.DoesNotExist:
+            ctx["error"] = "usuario no existente"
+            return render(request, "publico/login_cliente.html", ctx)
+        
+        except Clientes.DoesNotExist:
+            ctx["error"] = "usuario no existente"
+            return render(request, "publico/login_cliente.html", ctx)
+       
         # Soporta hash y texto plano (por si tienes datos viejos)
         ok = False
         if user.clave:
@@ -151,11 +178,92 @@ def login_cliente(request):
                 ok = (password == user.clave)
 
         if not ok:
-            ctx["error"] = "Correo o contraseña incorrectos."
+            ctx["error"] = "contraseña incorrecta."
             return render(request, "publico/login_cliente.html", ctx)
 
-        request.session["cliente_id"] = user.id
+        request.session["cliente_id"] = cliente.id
         request.session["cliente_email"] = user.email
-        return redirect("catalogo")
+        return redirect("pantalla_inicio_cliente")
 
     return render(request, "publico/login_cliente.html")
+
+def pantalla_inicio_cliente(request):
+    # Verificar que el cliente está logueado
+    if "cliente_id" not in request.session:
+        messages.error(request, "Debes iniciar sesión")
+        return redirect("inicio_sesion_cliente")
+    
+    try:
+        cliente = Clientes.objects.get(id=request.session["cliente_id"])
+        usuario = cliente.usuario
+        
+        context = {
+            "cliente": cliente,
+            "usuario": usuario,
+        }
+        return render(request, "clientes/pantalla_inicio_cliente.html", context)
+        
+    except Clientes.DoesNotExist:
+        messages.error(request, "Cliente no encontrado")
+        return redirect("inicio_sesion_cliente")
+
+def cerrar_sesion_cliente(request):
+    # Limpiar la sesión
+    if "cliente_id" in request.session:
+        del request.session["cliente_id"]
+    if "cliente_email" in request.session:
+        del request.session["cliente_email"]
+    
+    messages.success(request, "Sesión cerrada correctamente")
+    return redirect("inicio_sesion_cliente") 
+
+def lista_reservas_clientes(request):
+    # Sin funcionalidad, solo muestra el template
+    return render(request, 'clientes/lista_reservas_clientes.html')
+
+
+
+
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from datetime import timedelta, datetime
+
+from biblio.models import Clientes, Ejemplares, Libros, Prestamos
+
+def registrar_prestamo(request):
+
+    # Clientes con usuario asociado
+    clientes = Clientes.objects.select_related("usuario").all()
+
+    # Ejemplares disponibles (estado = 'disponible')
+    ejemplares = Ejemplares.objects.select_related("libro").filter(estado="disponible")
+
+    if request.method == "POST":
+        cliente_id = request.POST.get("cliente")
+        ejemplar_id = request.POST.get("ejemplar")
+        fecha_inicio = request.POST.get("fecha_inicio")
+        fecha_fin = request.POST.get("fecha_fin")
+
+        if not (cliente_id and ejemplar_id and fecha_inicio and fecha_fin):
+            messages.error(request, "Todos los campos son obligatorios.")
+            return redirect("registrar_prestamo")
+
+        # Crear el préstamo
+        Prestamos.objects.create(
+            cliente_id=cliente_id,
+            ejemplar_id=ejemplar_id,
+            fecha_inicio=fecha_inicio,
+            fecha_fin=fecha_fin,
+            estado="prestado"
+        )
+
+        # Cambiar estado del ejemplar
+        Ejemplares.objects.filter(id=ejemplar_id).update(estado="prestado")
+
+        messages.success(request, "Préstamo registrado correctamente.")
+        return redirect("registrar_prestamo")
+
+    return render(request, "seguridad/registrar_prestamo.html", {
+        "clientes": clientes,
+        "ejemplares": ejemplares,
+    })

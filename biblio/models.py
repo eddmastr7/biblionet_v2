@@ -27,6 +27,18 @@ class Permisos(models.Model):
         db_table = 'permisos'
 
 
+class RolPermiso(models.Model):
+    id = models.AutoField(primary_key=True)
+    rol = models.ForeignKey(Roles, models.DO_NOTHING)
+    permiso = models.ForeignKey(Permisos, models.DO_NOTHING)
+
+    def __str__(self):
+        return f"{self.rol} - {self.permiso}"
+
+    class Meta:
+        managed = False
+        db_table = 'rol_permiso'
+
 class Usuarios(models.Model):
     rol = models.ForeignKey(Roles, models.DO_NOTHING)
     nombre = models.CharField(max_length=100)
@@ -34,7 +46,7 @@ class Usuarios(models.Model):
     email = models.CharField(unique=True, max_length=150)
     clave = models.CharField(max_length=255)
     estado = models.CharField(max_length=20, blank=True, null=True)
-    fecha_creacion = models.DateTimeField(blank=True, null=True)
+    fecha_creacion = models.DateTimeField( blank=True, null=True)
 
     class Meta:
         managed = False
@@ -53,7 +65,7 @@ class Bitacora(models.Model):
 
 class Clientes(models.Model):
     usuario = models.ForeignKey(Usuarios, models.DO_NOTHING, blank=True, null=True)
-    dni = models.CharField(unique=True, max_length=20)
+    dni = models.CharField( max_length=20)
     direccion = models.CharField(max_length=255, blank=True, null=True)
     telefono = models.CharField(max_length=20, blank=True, null=True)
     estado = models.CharField(max_length=20, blank=True, null=True)
@@ -71,7 +83,7 @@ class Libros(models.Model):
     editorial = models.CharField(max_length=150, blank=True, null=True)
     anio_publicacion = models.TextField(blank=True, null=True)  # This field type is a guess.
     stock_total = models.IntegerField(blank=True, null=True)
-    portada = models.CharField(max_length=255, blank=True, null=True)
+    portada = models.ImageField(upload_to='portadas/', blank=True, null=True)
     fecha_registro = models.DateTimeField(blank=True, null=True)
 
     class Meta:
@@ -140,3 +152,5 @@ class CatalogoPublico(models.Model):
     class Meta:
         managed = False
         db_table = 'catalogo_publico'
+
+

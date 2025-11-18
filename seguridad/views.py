@@ -1,217 +1,452 @@
 from functools import wraps
-
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.views.decorators.csrf import csrf_protect
 from django.contrib.auth.hashers import check_password, make_password
-from django.contrib.auth import logout as auth_logout   # 👈 faltaba este import
+from django.contrib.auth import logout as auth_logout  
 from django.utils import timezone
+from django.contrib import messages
+from django.core.paginator import Paginator
 
-from biblio.models import Usuarios, Roles, Libros, Prestamos
-
+from biblio.models import Usuarios, Roles, Libros, Prestamos, Bitacora, Libros
 
 # ---------- Helpers de sesión / roles ----------
-def _is_logged(request):
-    return request.session.get("usuario_id") is not None
+def _usuario_autenticado(request):
+    return request.session.get("id_usuario") is not None
 
-def _role(request):
-    # "administrador" | "empleado" (según Roles.nombre)
-    return request.session.get("rol")
+def _obtener_rol_usuario(request):
+    return request.session.get("rol_usuario")
 
-def require_role(*allowed):
-    """
-    Redirige a 'login' si no hay sesión o si el rol no está permitido.
-    """
-    def deco(view):
-        @wraps(view)
-        def wrapper(request, *args, **kwargs):
-            if not _is_logged(request):
-                return redirect("login")
-            if _role(request) not in allowed:
-                return redirect("login")
-            return view(request, *args, **kwargs)
-        return wrapper
-    return deco
-
-def _map_front_rol(rol_front: str) -> str:
-    """
-    Mapea el valor del <select> del form a Roles.nombre.
-    Acepta: 'admin' -> 'administrador', 'empleado' -> 'empleado'.
-    """
-    if rol_front in ("admin", "administrador"):
-        return "administrador"
-    if rol_front == "empleado":
-        return "empleado"
-    return ""
-
+def requerir_rol(*roles_permitidos):
+    """Redirige a login si no hay sesión o si el rol no está permitido."""
+    def decorador(vista):
+        @wraps(vista)
+        def envoltura(request, *args, **kwargs):
+            if not _usuario_autenticado(request):
+                return redirect("inicio_sesion")
+            if _obtener_rol_usuario(request) not in roles_permitidos:
+                return redirect("inicio_sesion")
+            return vista(request, *args, **kwargs)
+        return envoltura
+    return decorador
 
 # ---------- Login / Logout (empleados/admin) ----------
+def _redirigir_segun_rol(rol):
+    if rol=="administrador":
+        return redirect("panel_administrador")
+    else :
+        return redirect('panel_bibliotecario')
+    
+    
+
 @csrf_protect
-def login_view(request):
-    # Si ya tiene sesión, lo mandamos a su panel
-    if _is_logged(request):
-        return redirect("admin_home" if _role(request) == "administrador" else "empleado_home")
-
-    ctx = {"error": None}
+def iniciar_sesion_empleado(request):
+    if _usuario_autenticado(request):
+        rol_actual = _obtener_rol_usuario(request)
+        if rol_actual == "administrador":
+            return redirect("panel_administrador")
+        else:
+            return redirect("panel_bibliotecario")
+    
+    contexto = {"error": None}
     if request.method == "POST":
-        email = request.POST.get("email", "").strip()
-        password = request.POST.get("password", "")
-        rol_front = request.POST.get("rol", "")
-        remember = request.POST.get("remember", "")
+        correo = request.POST.get("email", "").strip()
+        contrasena = request.POST.get("password", "")
+        rol_formulario = request.POST.get("rol", "")
+        recordar_sesion = request.POST.get("remember", "")
 
-        if not email or not password or not rol_front:
-            ctx["error"] = "Completa correo, contraseña y rol."
-            return render(request, "seguridad/login_empleados.html", ctx)
+        if not correo or not contrasena or not rol_formulario:
+            contexto["error"] = "Completa correo, contraseña y rol."
+            return render(request, "seguridad/login_empleados.html", contexto)
 
-        rol_db = _map_front_rol(rol_front)
-        if not rol_db:
-            ctx["error"] = "Rol inválido."
-            return render(request, "seguridad/login_empleados.html", ctx)
+        mapeo_roles = {
+            "admin": "administrador",
+            "bibliotecario": "bibliotecario"
+        }
+        rol_bd = mapeo_roles.get(rol_formulario)
+        
+        if not rol_bd:
+            contexto["error"] = "Rol inválido."
+            return render(request, "seguridad/login_empleados.html", contexto)
 
         try:
-            user = Usuarios.objects.select_related("rol").get(
-                email=email, rol__nombre=rol_db, estado="activo"
+            usuario = Usuarios.objects.select_related("rol").get(
+                email=correo, rol__nombre=rol_bd, estado="activo"
             )
         except Usuarios.DoesNotExist:
-            ctx["error"] = "Credenciales incorrectas. Intenta nuevamente."
-            return render(request, "seguridad/login_empleados.html", ctx)
+            contexto["error"] = "Credenciales incorrectas. Intenta nuevamente."
+            return render(request, "seguridad/login_empleados.html", contexto)
 
-        # Soporta hash y texto plano (temporal)
-        clave_db = user.clave or ""
-        if clave_db.startswith(("pbkdf2_", "argon2$", "bcrypt$")):
-            ok = check_password(password, clave_db)
+        # Verificar contraseña
+        contrasena_bd = usuario.clave or ""
+        if contrasena_bd.startswith(("pbkdf2_", "argon2$", "bcrypt$")):
+            coincide = check_password(contrasena, contrasena_bd)
         else:
-            ok = (password == clave_db)
+            coincide = (contrasena == contrasena_bd)
 
-        if not ok:
-            ctx["error"] = "Credenciales incorrectas. Intenta nuevamente."
-            return render(request, "seguridad/login_empleados.html", ctx)
+        if not coincide:
+            contexto["error"] = "Credenciales incorrectas. Intenta nuevamente."
+            return render(request, "seguridad/login_empleados.html", contexto)
 
-        # Login OK: guardamos mínimos en sesión
-        request.session["usuario_id"] = user.id
-        request.session["usuario_email"] = user.email
-        request.session["rol"] = user.rol.nombre  # "administrador" | "empleado"
-        # 14 días si marcó "Recordar sesión"
-        request.session.set_expiry(60 * 60 * 24 * 14 if remember == "on" else 0)
+        # Login exitoso
+        request.session["id_usuario"] = usuario.id
+        request.session["correo_usuario"] = usuario.email
+        request.session["rol_usuario"] = usuario.rol.nombre
+        request.session.set_expiry(60 * 60 * 24 * 14 if recordar_sesion == "on" else 0)
 
-        return redirect("admin_home" if user.rol.nombre == "administrador" else "empleado_home")
+        if usuario.rol.nombre == "administrador":
+            return redirect("panel_administrador")
+        else:
+            return redirect("panel_bibliotecario")
 
-    return render(request, "seguridad/login_empleados.html", ctx)
+    return render(request, "seguridad/login_empleados.html", contexto)
 
-
-def logout_view(request):
-    """
-    Versión corta por compatibilidad, si la estabas usando.
-    """
-    return cerrar_sesion(request)
-
+def cerrar_sesion_empleado(request):
+    request.session.flush()
+    return redirect("inicio_sesion")
 
 # ---------- Paneles ----------
-@require_role("administrador")
-def admin_home(request):
+@requerir_rol("administrador")
+def panel_administrador(request):
     try:
-        current_user = Usuarios.objects.select_related("rol").get(
-            id=request.session.get("usuario_id")
+        usuario_actual = Usuarios.objects.select_related("rol").get(
+            id=request.session.get("id_usuario")
         )
     except Usuarios.DoesNotExist:
-        return redirect("logout")
+        return redirect("cerrar_sesion")
 
     total_libros = Libros.objects.count()
+    
     empleados_activos = Usuarios.objects.filter(
-        rol__nombre="empleado", estado="activo"
+        rol__nombre__in=["administrador", "bibliotecario"], 
+        estado__iexact="activo"
     ).count()
-    hoy = timezone.localdate()
-    alertas = Prestamos.objects.filter(
-        fecha_devolucion__isnull=True, fecha_fin__lt=hoy
-    ).count()
+    
     empleados = Usuarios.objects.select_related("rol").filter(
-        rol__nombre="empleado"
-    ).order_by("id")
+        rol__nombre__in=["administrador", "bibliotecario"]
+    ).order_by("-fecha_creacion")
 
-    ctx = {
-        "current_user": current_user,
+    contexto = {
+        "usuario_actual": usuario_actual,
         "total_libros": total_libros,
-        "ventas_mensuales": None,  # aún no hay tabla de ventas
+        "ventas_mensuales": None,
         "empleados_activos": empleados_activos,
-        "alertas": alertas,
         "empleados": empleados,
     }
-    return render(request, "seguridad/admin_home.html", ctx)
+    return render(request, "seguridad/admin_home.html", contexto)
+
+@requerir_rol("bibliotecario")
+def panel_bibliotecario(request):
+    try:
+        usuario_actual = Usuarios.objects.select_related("rol").get(
+            id=request.session.get("id_usuario")
+        )
+    except Usuarios.DoesNotExist:
+        return redirect("cerrar_sesion")
+
+    total_libros = Libros.objects.count()
+    prestamos_activos = Prestamos.objects.filter(estado="activo").count()
+    
+    hoy = timezone.localdate()
+    prestamos_vencidos = Prestamos.objects.filter(
+        fecha_devolucion__isnull=True, 
+        fecha_fin__lt=hoy
+    ).count()
+
+    contexto = {
+        "usuario_actual": usuario_actual,
+        "total_libros": total_libros,
+        "prestamos_activos": prestamos_activos,
+        "prestamos_vencidos": prestamos_vencidos,
+    }
+    return render(request, "seguridad/bibliotecario_home.html", contexto)
 
 
-@require_role("empleado")
-def empleado_home(request):
-    return render(request, "seguridad/empleado_home.html")
-
-
-# ---------- Alta de empleados ----------
-@require_role("administrador")
+@requerir_rol("administrador")
 @csrf_protect
-def crear_empleado(request):
-    """
-    Crea usuarios con rol 'administrador' o 'empleado'.
-    """
-    ctx = {"ok": None, "error": None}
+def registrar_empleado(request):
+    
+    roles_disponibles = [
+        {"nombre_formulario": "admin", "nombre_bd": "administrador", "nombre_mostrar": "Administrador"},
+        {"nombre_formulario": "bibliotecario", "nombre_bd": "bibliotecario", "nombre_mostrar": "Bibliotecario"},
+    ]
+    
+    contexto = {
+        "exito": None, 
+        "error": None,
+        "roles": roles_disponibles,
+        "usuario_actual": Usuarios.objects.get(id=request.session.get("id_usuario"))
+    }
 
     if request.method == "POST":
-        nombre_completo = request.POST.get("nombre", "").strip()
-        email = request.POST.get("email", "").strip()
-        clave = request.POST.get("clave", "")
-        rol_front = request.POST.get("rol", "")
+        nombre = request.POST.get("nombre", "").strip().lower()
+        apellido = request.POST.get("apellido", "").strip().lower()
+        correo = request.POST.get("email", "").strip()
+        contrasena = request.POST.get("clave", "")
+        rol_formulario = request.POST.get("rol", "")
         estado = request.POST.get("estado", "activo")
 
-        if not (nombre_completo and email and clave and rol_front):
-            ctx["error"] = "Completa nombre, email, clave y rol."
-            return render(request, "seguridad/registrar_empleados.html", ctx)
+        # Validaciones
+        if not all([nombre, apellido, correo, contrasena, rol_formulario]):
+            contexto["error"] = "Completa todos los campos obligatorios."
+            return render(request, "seguridad/registrar_empleados.html", contexto)
 
-        partes = nombre_completo.split()
-        nombre = partes[0]
-        apellido = " ".join(partes[1:]) if len(partes) > 1 else ""
+        if len(contrasena) < 8:
+            contexto["error"] = "La contraseña debe tener al menos 8 caracteres."
+            return render(request, "seguridad/registrar_empleados.html", contexto)
 
-        rol_db = _map_front_rol(rol_front)
-        if rol_db not in ("administrador", "empleado"):
-            ctx["error"] = "Rol inválido."
-            return render(request, "seguridad/registrar_empleados.html", ctx)
+        # Mapear rol formulario a base de datos
+        mapeo_roles = {"admin": "administrador", "bibliotecario": "bibliotecario"}
+        rol_bd = mapeo_roles.get(rol_formulario)
+        
+        if not rol_bd:
+            contexto["error"] = "Rol inválido."
+            return render(request, "seguridad/registrar_empleados.html", contexto)
 
         try:
-            rol_obj = Roles.objects.get(nombre=rol_db)
+            objeto_rol = Roles.objects.get(nombre=rol_bd)
         except Roles.DoesNotExist:
-            ctx["error"] = "No existe el rol seleccionado. Crea 'administrador' y 'empleado' en la tabla Roles."
-            return render(request, "seguridad/registrar_empleados.html", ctx)
+            contexto["error"] = f"No existe el rol '{rol_bd}' en la base de datos."
+            return render(request, "seguridad/registrar_empleados.html", contexto)
 
-        if Usuarios.objects.filter(email=email).exists():
-            ctx["error"] = "Ya existe un usuario con ese correo."
-            return render(request, "seguridad/registrar_empleados.html", ctx)
+        if Usuarios.objects.filter(email=correo).exists():
+            contexto["error"] = "Ya existe un usuario con ese correo."
+            return render(request, "seguridad/registrar_empleados.html", contexto)
 
-        Usuarios.objects.create(
-            rol=rol_obj,
-            nombre=nombre,
-            apellido=apellido,
-            email=email,
-            clave=make_password(clave),  # guarda hash
-            estado=estado,
+        # Crear el usuario
+        try:
+            Usuarios.objects.create(
+                rol=objeto_rol,
+                nombre=nombre,
+                apellido=apellido,
+                email=correo,
+                clave=make_password(contrasena),
+                estado=estado,
+                fecha_creacion=timezone.localtime()
+            )
+
+            Bitacora.objects.create(
+                usuario=contexto["usuario_actual"], 
+                accion=f"REGISTRO EMPLEADO: {correo} como {rol_bd}",
+                fecha=timezone.now()
+            )
+
+            contexto["exito"] = f"Empleado {nombre} {apellido} creado exitosamente."
+        
+            
+        except Exception as error:
+            contexto["error"] = f"Error al crear el usuario: {str(error)}"
+
+    return render(request, "seguridad/registrar_empleados.html", contexto)
+
+@requerir_rol("bibliotecario")
+
+def inventario(request):
+    # Usuario logueado
+    usuario_actual = Usuarios.objects.select_related("rol").get(
+        id=request.session.get("id_usuario")
+    )
+
+    # Búsqueda
+    query = request.GET.get('q', '').strip()
+    if query:
+        libros_qs = (
+            Libros.objects.filter(titulo__icontains=query) |
+            Libros.objects.filter(autor__icontains=query) |
+            Libros.objects.filter(isbn__icontains=query) |
+            Libros.objects.filter(categoria__icontains=query)
+        ).distinct().order_by('autor','titulo')
+    else:
+        libros_qs = Libros.objects.all().order_by('titulo')
+
+    # Paginación: 5 libros por página
+    paginator = Paginator(libros_qs, 5)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    # POST: agregar libro
+    if request.method == 'POST' and 'agregar_libro' in request.POST:
+        try:
+            anio_publicacion = str(request.POST.get('anio_publicacion'))
+
+            portada_file = request.FILES.get('portada')  # puede venir vacío
+
+            libro = Libros(
+                isbn=request.POST.get('isbn'),
+                titulo=request.POST.get('titulo'),
+                autor=request.POST.get('autor'),
+                categoria=request.POST.get('categoria'),
+                editorial=request.POST.get('editorial'),
+                anio_publicacion=anio_publicacion,
+                stock_total=request.POST.get('stock', 0),
+                portada=portada_file,            # archivo de imagen
+                fecha_registro=timezone.now(),   # fecha automática
+            )
+            libro.save()
+            messages.success(request, 'Libro agregado correctamente')
+            return redirect('inventario')
+
+        except Exception as e:
+            messages.error(request, f'Error al agregar el libro: {str(e)}')
+            return redirect('inventario')
+
+    # POST: editar libro
+    if request.method == 'POST' and 'editar_libro' in request.POST:
+        try:
+            libro_id = request.POST.get('libro_id')
+            libro = get_object_or_404(Libros, id=libro_id)
+
+            anio_publicacion = str(request.POST.get('anio_publicacion'))
+
+            libro.isbn = request.POST.get('isbn')
+            libro.titulo = request.POST.get('titulo')
+            libro.autor = request.POST.get('autor')
+            libro.categoria = request.POST.get('categoria')
+            libro.editorial = request.POST.get('editorial')
+            libro.anio_publicacion = anio_publicacion
+            libro.stock_total = request.POST.get('stock', 0)
+
+            # Si viene una nueva portada, la reemplazamos
+            portada_file = request.FILES.get('portada')
+            if portada_file:
+                libro.portada = portada_file
+
+            libro.save()
+
+            Bitacora.objects.create(
+                usuario=usuario_actual, 
+                accion=f"EDITO EL LIBRO: '{libro.titulo}'",
+                fecha=timezone.now()
+            )
+
+            messages.success(request, 'Libro actualizado correctamente')
+            return redirect('inventario')
+
+        except Exception as e:
+            messages.error(request, f'Error al actualizar el libro: {str(e)}')
+            return redirect('inventario')
+
+    contexto = {
+        "usuario_actual": usuario_actual,
+        "page_obj": page_obj,
+        "query": query,
+    }
+
+    return render(request, "seguridad/inventario.html", contexto)
+
+
+    
+
+from django.shortcuts import render, get_object_or_404
+from datetime import date
+from biblio.models import Clientes, Prestamos, Reservas
+
+def historial_cliente(request, cliente_id):
+    # Traer el cliente de la base de datos
+    cliente = get_object_or_404(Clientes, id=cliente_id)
+
+    # Leer filtros si el usuario los usa
+    fecha_desde = request.GET.get("desde")
+    fecha_hasta = request.GET.get("hasta")
+
+    # ----- PRESTAMOS -----
+    prestamos = Prestamos.objects.filter(cliente=cliente)
+    if fecha_desde:
+        prestamos = prestamos.filter(fecha_inicio__gte=fecha_desde)
+    if fecha_hasta:
+        prestamos = prestamos.filter(fecha_inicio__lte=fecha_hasta)
+
+    lista_prestamos = []
+    for p in prestamos:
+        libro = p.ejemplar.libro
+
+        # Calcular mora
+        mora = 0
+        if p.fecha_devolucion and p.fecha_devolucion > p.fecha_fin:
+            mora = (p.fecha_devolucion - p.fecha_fin).days
+        elif not p.fecha_devolucion and date.today() > p.fecha_fin:
+            mora = (date.today() - p.fecha_fin).days
+
+        estado = p.estado or ("En mora" if mora > 0 else "En curso")
+
+        lista_prestamos.append({
+            "tipo": "prestamo",
+            "libro_titulo": libro.titulo,
+            "libro_autor": libro.autor,
+            "inicio": p.fecha_inicio,
+            "fin": p.fecha_fin,
+            "mora": mora if mora > 0 else "-",
+            "estado": estado,
+        })
+
+    # ----- RESERVAS -----
+    reservas = Reservas.objects.filter(cliente=cliente)
+    if fecha_desde:
+        reservas = reservas.filter(fecha_reserva__date__gte=fecha_desde)
+    if fecha_hasta:
+        reservas = reservas.filter(fecha_reserva__date__lte=fecha_hasta)
+
+    lista_reservas = []
+    for r in reservas:
+        lista_reservas.append({
+            "tipo": "reserva",
+            "libro_titulo": r.libro.titulo,
+            "libro_autor": r.libro.autor,
+            "inicio": r.fecha_reserva.date() if r.fecha_reserva else None,
+            "fin": r.fecha_vencimiento.date() if r.fecha_vencimiento else None,
+            "mora": "-",
+            "estado": r.estado or "Completada",
+        })
+
+    # Unir y ordenar historial
+    historial = lista_prestamos + lista_reservas
+    historial.sort(key=lambda x: x["inicio"] or date.min, reverse=True)
+
+    return render(request, "seguridad/historial_cliente.html", {
+        "cliente": cliente,
+        "historial": historial,
+    })
+
+
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib import messages
+from biblio.models import Clientes, Ejemplares, Prestamos
+
+def registrar_prestamo(request):
+    # Traer clientes activos
+    clientes = Clientes.objects.select_related("usuario").all()
+    # Traer ejemplares disponibles
+    ejemplares = Ejemplares.objects.select_related("libro").filter(estado="disponible")
+
+    if request.method == "POST":
+        cliente_id = request.POST.get("cliente")
+        ejemplar_id = request.POST.get("ejemplar")
+        fecha_inicio = request.POST.get("fecha_inicio")
+        fecha_fin = request.POST.get("fecha_fin")
+
+        if not (cliente_id and ejemplar_id and fecha_inicio and fecha_fin):
+            messages.error(request, "Debe completar todos los campos")
+            return redirect("registrar_prestamo")
+
+        cliente = get_object_or_404(Clientes, id=cliente_id)
+        ejemplar = get_object_or_404(Ejemplares, id=ejemplar_id)
+
+        # Crear el préstamo
+        Prestamos.objects.create(
+            cliente=cliente,
+            ejemplar=ejemplar,
+            fecha_inicio=fecha_inicio,
+            fecha_fin=fecha_fin,
+            estado="En curso"
         )
-        ctx["ok"] = f"Empleado creado: {email}"
-        return render(request, "seguridad/registrar_empleados.html", ctx)
 
-    return render(request, "seguridad/registrar_empleados.html", ctx)
+        # Cambiar el estado del ejemplar a prestado
+        ejemplar.estado = "prestado"
+        ejemplar.save()
 
+        messages.success(request, f"Préstamo registrado para {cliente.usuario.nombre} {cliente.usuario.apellido}")
+        return redirect("registrar_prestamo")
 
-# ---------- Compat con nombres usados en urls ----------
-def inicio_sesion(request):
-    """Alias si alguna plantilla aún llama a 'inicio_sesion'."""
-    return render(request, "seguridad/login_empleados.html")
-
-
-def cerrar_sesion(request):
-    """
-    Cierra la sesión y limpia cualquier flag custom, luego vuelve al inicio público.
-    """
-    auth_logout(request)  # Django auth logout
-    for key in ("empleado_id", "usuario_id", "current_user_id", "rol", "is_admin", "usuario_email"):
-        request.session.pop(key, None)
-
-    # Redirige a la portada pública
-    try:
-        return redirect("inicio")  # definido en biblio.urls
-    except Exception:
-        return redirect("/")       # fallback
+    return render(request, "seguridad/registrar_prestamo.html", {
+        "clientes": clientes,
+        "ejemplares": ejemplares,
+    })
