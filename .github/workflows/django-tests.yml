@@ -35,10 +35,10 @@ jobs:
         # Instalar librerías comunes de hashing (necesarias para make_password)
         pip install django-environ python-dotenv pillow
         pip install bcrypt argon2-cffi
-        # Si usas MySQL, necesitas mysqlclient. Si usas PostgreSQL, necesitas psycopg2.
-        # pip install mysqlclient # Descomenta si usas MySQL
+        # NOTA: Si tus pruebas requieren MySQL, descomenta esta línea:
+        # pip install mysqlclient 
         
-    - name: Crear archivo settings de prueba (Opcional, pero recomendado)
+    - name: Crear archivo settings de prueba (Final)
       run: |
         # Necesitas un settings.py básico para que Django sepa qué aplicación usar
         # y qué base de datos de prueba usar (usualmente sqlite3 por defecto)
@@ -53,8 +53,8 @@ jobs:
                 'NAME': os.path.join(os.getcwd(), 'test_db.sqlite3'),
             }
         }
-        # ¡CORRECCIÓN AQUÍ! Se asume que el módulo principal se llama 'biblionet_v2'.
-        ROOT_URLCONF = 'biblionet_v2.urls' 
+        # ¡CORRECCIÓN DEFINITIVA! Usamos 'core.urls'
+        ROOT_URLCONF = 'core.urls' 
         INSTALLED_APPS = [
             'django.contrib.admin',
             'django.contrib.auth',
@@ -62,7 +62,9 @@ jobs:
             'django.contrib.sessions',
             'django.contrib.messages',
             'django.contrib.staticfiles',
-            'biblio', # ¡Asegúrate de que tu app 'biblio' esté aquí!
+            'biblio', 
+            'catalogo',
+            'seguridad',
         ]
         MIDDLEWARE = [
             'django.middleware.security.SecurityMiddleware',
@@ -79,5 +81,4 @@ jobs:
       run: |
         # Ejecuta las pruebas usando el archivo de settings temporal
         python manage.py test biblio --settings=test_settings
-
         
