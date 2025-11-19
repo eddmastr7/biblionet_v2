@@ -381,3 +381,11 @@ def historial_cliente(request, cliente_id):
 
     return render(request, "seguridad/historial_cliente.html", contexto)
 
+def reglas(request):
+    return render(request, "seguridad/reglas.html")
+
+def historial_inventario(request):
+    return render(request, "seguridad/historial_inventario.html")
+
+
+

@@ -1,0 +1,83 @@
+/* ENCABEZADO */
+.prestamo-header {
+    background: linear-gradient(135deg, #2c5aa0, #27ae60);
+    padding: 25px 30px;
+    border-radius: 18px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    color: white;
+}
+
+.header-logo {
+    width: 65px;
+    height: 35px;
+    border-radius: 10px;
+    object-fit: contain;
+}
+
+.titulo {
+    font-size: 2rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.subtitulo {
+    font-size: 1rem;
+    opacity: 0.8;
+    margin: 0;
+}
+
+/* TARJETAS */
+.prestamo-card {
+    border-radius: 18px;
+}
+
+.titulo-seccion {
+    color: #1e3a8a;
+    font-weight: 700;
+}
+
+/* CAMPOS */
+.campo {
+    height: 50px;
+    border-radius: 12px;
+    padding-left: 15px;
+    font-size: 1rem;
+}
+
+/* BOTONES */
+.btn-registrar {
+    padding: 12px 28px;
+    border-radius: 12px;
+    font-weight: 600;
+}
+
+.btn-primary {
+    background-color: #1e3a8a !important;
+    border: none;
+}
+
+.btn-primary:hover {
+    background-color: #162c6b !important;
+}
+
+.btn-success {
+    background-color: #27ae60 !important;
+    border: none;
+}
+
+.btn-success:hover {
+    background-color: #1f9852 !important;
+}
+
+/* TABLA */
+.table thead th {
+    font-weight: 700;
+    color: #2c3e50;
+    font-size: 0.9rem;
+}
+
+.table-hover tbody tr:hover {
+    background-color: #f3f7ff;
+}
