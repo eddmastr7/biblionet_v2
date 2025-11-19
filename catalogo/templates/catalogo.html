@@ -1,0 +1,53 @@
+<h1>Catálogo de Libros</h1>
+
+<form method="GET" action="{% url 'catalogo_url' %}" style="margin-bottom: 20px;">
+    <input type="text" 
+           name="q" 
+           placeholder="Buscar Título o Autor" 
+           value="{{ query|default:'' }}" 
+           style="padding: 8px; width: 300px;">
+           
+    <select name="disponible" style="padding: 8px;">
+        <option value="">-- Disponibilidad --</option>
+        <option value="si" {% if request.GET.disponible == 'si' %}selected{% endif %}>Disponible</option>
+        <option value="no" {% if request.GET.disponible == 'no' %}selected{% endif %}>No Disponible</option>
+    </select>
+    
+    <button type="submit" style="padding: 8px;">Buscar</button>
+    <a href="{% url 'catalogo_url' %}" style="padding: 8px; background-color: #ccc; text-decoration: none;">Limpiar</a>
+</form>
+
+<table border="1" style="width: 100%; border-collapse: collapse;">
+    <thead>
+        <tr>
+            <th style="padding: 10px;">Título</th>
+            <th style="padding: 10px;">Autor</th>
+            <th style="padding: 10px;">Disponibilidad</th>
+            <th style="padding: 10px;">Acciones</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for libro in libros %}
+        <tr>
+            <td style="padding: 10px;">{{ libro.titulo }}</td>
+            <td style="padding: 10px;">{{ libro.autor }}</td>
+            
+            <td style="padding: 10px;">
+                {% if libro.disponible %}
+                    <span style="color: green; font-weight: bold;">✅ Disponible</span>
+                {% else %}
+                    <span style="color: red; font-weight: bold;">❌ Prestado</span>
+                {% endif %}
+            </td>
+            
+            <td style="padding: 10px;">
+                <a href="{% url 'ficha_libro' libro.pk %}" style="background-color: #007bff; color: white; padding: 5px 10px; text-decoration: none;">Ver Ficha</a>
+            </td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="4" style="padding: 10px; text-align: center;">No se encontraron libros que coincidan con la búsqueda.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
