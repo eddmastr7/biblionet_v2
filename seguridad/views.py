@@ -7,7 +7,11 @@ from django.utils import timezone
 from django.contrib import messages
 from django.core.paginator import Paginator
 
+<<<<<<< HEAD
 from biblio.models import Usuarios, Roles, Libros, Prestamos, Bitacora, Libros, Reservas
+=======
+from biblio.models import Usuarios, Roles, Libros, Prestamos, Bitacora, Libros
+>>>>>>> feat-inventario
 
 # ---------- Helpers de sesión / roles ----------
 def _usuario_autenticado(request):
@@ -15,6 +19,7 @@ def _usuario_autenticado(request):
 
 def _obtener_rol_usuario(request):
     return request.session.get("rol_usuario")
+<<<<<<< HEAD
 
 
 # ESTA FUNCIÓN ES LA QUE FALTA O NO ESTÁ EN EL LUGAR CORRECTO
@@ -43,7 +48,21 @@ def requerir_rol(*roles_permitidos):
         return envoltura
     return decorador
 
+=======
+>>>>>>> feat-inventario
 
+def requerir_rol(*roles_permitidos):
+    """Redirige a login si no hay sesión o si el rol no está permitido."""
+    def decorador(vista):
+        @wraps(vista)
+        def envoltura(request, *args, **kwargs):
+            if not _usuario_autenticado(request):
+                return redirect("inicio_sesion")
+            if _obtener_rol_usuario(request) not in roles_permitidos:
+                return redirect("inicio_sesion")
+            return vista(request, *args, **kwargs)
+        return envoltura
+    return decorador
 
 # ---------- Login / Logout (empleados/admin) ----------
 def _redirigir_segun_rol(rol):
@@ -350,6 +369,7 @@ def inventario(request):
     return render(request, "seguridad/inventario.html", contexto)
 
 
+<<<<<<< HEAD
 # ---------- LÓGICA DE RESERVAS (CORREGIDA) ----------
 
 @requerir_cliente # Usamos el decorador para forzar la sesión de cliente
@@ -392,8 +412,121 @@ def solicitar_reserva(request, libro_pk):
     # Si llega un GET, lo tratamos como error (debería ser POST)
     messages.error(request, "Método inválido para realizar una reserva.")
     return redirect('ficha_libro', pk=libro_pk)
+=======
+    
+
+from django.shortcuts import render, get_object_or_404
+from datetime import date
+from biblio.models import Clientes, Prestamos, Reservas
+
+def historial_cliente(request, cliente_id):
+    # Traer el cliente de la base de datos
+    cliente = get_object_or_404(Clientes, id=cliente_id)
+
+    # Leer filtros si el usuario los usa
+    fecha_desde = request.GET.get("desde")
+    fecha_hasta = request.GET.get("hasta")
+
+    # ----- PRESTAMOS -----
+    prestamos = Prestamos.objects.filter(cliente=cliente)
+    if fecha_desde:
+        prestamos = prestamos.filter(fecha_inicio__gte=fecha_desde)
+    if fecha_hasta:
+        prestamos = prestamos.filter(fecha_inicio__lte=fecha_hasta)
+
+    lista_prestamos = []
+    for p in prestamos:
+        libro = p.ejemplar.libro
+
+        # Calcular mora
+        mora = 0
+        if p.fecha_devolucion and p.fecha_devolucion > p.fecha_fin:
+            mora = (p.fecha_devolucion - p.fecha_fin).days
+        elif not p.fecha_devolucion and date.today() > p.fecha_fin:
+            mora = (date.today() - p.fecha_fin).days
+
+        estado = p.estado or ("En mora" if mora > 0 else "En curso")
+
+        lista_prestamos.append({
+            "tipo": "prestamo",
+            "libro_titulo": libro.titulo,
+            "libro_autor": libro.autor,
+            "inicio": p.fecha_inicio,
+            "fin": p.fecha_fin,
+            "mora": mora if mora > 0 else "-",
+            "estado": estado,
+        })
+
+    # ----- RESERVAS -----
+    reservas = Reservas.objects.filter(cliente=cliente)
+    if fecha_desde:
+        reservas = reservas.filter(fecha_reserva__date__gte=fecha_desde)
+    if fecha_hasta:
+        reservas = reservas.filter(fecha_reserva__date__lte=fecha_hasta)
+
+    lista_reservas = []
+    for r in reservas:
+        lista_reservas.append({
+            "tipo": "reserva",
+            "libro_titulo": r.libro.titulo,
+            "libro_autor": r.libro.autor,
+            "inicio": r.fecha_reserva.date() if r.fecha_reserva else None,
+            "fin": r.fecha_vencimiento.date() if r.fecha_vencimiento else None,
+            "mora": "-",
+            "estado": r.estado or "Completada",
+        })
+
+    # Unir y ordenar historial
+    historial = lista_prestamos + lista_reservas
+    historial.sort(key=lambda x: x["inicio"] or date.min, reverse=True)
+
+    return render(request, "seguridad/historial_cliente.html", {
+        "cliente": cliente,
+        "historial": historial,
+    })
 
 
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib import messages
+from biblio.models import Clientes, Ejemplares, Prestamos
+
+def registrar_prestamo(request):
+    # Traer clientes activos
+    clientes = Clientes.objects.select_related("usuario").all()
+    # Traer ejemplares disponibles
+    ejemplares = Ejemplares.objects.select_related("libro").filter(estado="disponible")
+
+    if request.method == "POST":
+        cliente_id = request.POST.get("cliente")
+        ejemplar_id = request.POST.get("ejemplar")
+        fecha_inicio = request.POST.get("fecha_inicio")
+        fecha_fin = request.POST.get("fecha_fin")
+
+        if not (cliente_id and ejemplar_id and fecha_inicio and fecha_fin):
+            messages.error(request, "Debe completar todos los campos")
+            return redirect("registrar_prestamo")
+
+        cliente = get_object_or_404(Clientes, id=cliente_id)
+        ejemplar = get_object_or_404(Ejemplares, id=ejemplar_id)
+
+        # Crear el préstamo
+        Prestamos.objects.create(
+            cliente=cliente,
+            ejemplar=ejemplar,
+            fecha_inicio=fecha_inicio,
+            fecha_fin=fecha_fin,
+            estado="En curso"
+        )
+
+        # Cambiar el estado del ejemplar a prestado
+        ejemplar.estado = "prestado"
+        ejemplar.save()
+>>>>>>> feat-inventario
+
+        messages.success(request, f"Préstamo registrado para {cliente.usuario.nombre} {cliente.usuario.apellido}")
+        return redirect("registrar_prestamo")
+
+<<<<<<< HEAD
 # NUEVA VISTA: LISTADO DE RESERVAS DEL CLIENTE
 @requerir_cliente
 def listado_reservas_view(request):
@@ -451,3 +584,9 @@ def ficha_libro(request, pk):
         'ya_reservado': ya_reservado,
     }
     return render(request, 'catalogo/ficha_libro.html', contexto)
+=======
+    return render(request, "seguridad/registrar_prestamo.html", {
+        "clientes": clientes,
+        "ejemplares": ejemplares,
+    })
+>>>>>>> feat-inventario

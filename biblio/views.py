@@ -219,4 +219,55 @@ def cerrar_sesion_cliente(request):
 
 def lista_reservas_clientes(request):
     # Sin funcionalidad, solo muestra el template
+<<<<<<< HEAD
     return render(request, 'clientes/lista_reservas_clientes.html')
+=======
+    return render(request, 'clientes/lista_reservas_clientes.html')
+
+
+
+
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from datetime import timedelta, datetime
+
+from biblio.models import Clientes, Ejemplares, Libros, Prestamos
+
+def registrar_prestamo(request):
+
+    # Clientes con usuario asociado
+    clientes = Clientes.objects.select_related("usuario").all()
+
+    # Ejemplares disponibles (estado = 'disponible')
+    ejemplares = Ejemplares.objects.select_related("libro").filter(estado="disponible")
+
+    if request.method == "POST":
+        cliente_id = request.POST.get("cliente")
+        ejemplar_id = request.POST.get("ejemplar")
+        fecha_inicio = request.POST.get("fecha_inicio")
+        fecha_fin = request.POST.get("fecha_fin")
+
+        if not (cliente_id and ejemplar_id and fecha_inicio and fecha_fin):
+            messages.error(request, "Todos los campos son obligatorios.")
+            return redirect("registrar_prestamo")
+
+        # Crear el préstamo
+        Prestamos.objects.create(
+            cliente_id=cliente_id,
+            ejemplar_id=ejemplar_id,
+            fecha_inicio=fecha_inicio,
+            fecha_fin=fecha_fin,
+            estado="prestado"
+        )
+
+        # Cambiar estado del ejemplar
+        Ejemplares.objects.filter(id=ejemplar_id).update(estado="prestado")
+
+        messages.success(request, "Préstamo registrado correctamente.")
+        return redirect("registrar_prestamo")
+
+    return render(request, "seguridad/registrar_prestamo.html", {
+        "clientes": clientes,
+        "ejemplares": ejemplares,
+    })
+>>>>>>> feat-inventario

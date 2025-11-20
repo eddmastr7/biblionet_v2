@@ -149,4 +149,12 @@ class CatalogoPublico(models.Model):
     total_ejemplares = models.IntegerField()
     disponibles = models.IntegerField()
 
+<<<<<<< HEAD
     
+=======
+    class Meta:
+        managed = False
+        db_table = 'catalogo_publico'
+
+
+>>>>>>> feat-inventario
