@@ -7,11 +7,11 @@ from django.utils import timezone
 from django.contrib import messages
 from django.core.paginator import Paginator
 
-<<<<<<< HEAD
+
 from biblio.models import Usuarios, Roles, Libros, Prestamos, Bitacora, Libros, Reservas
-=======
+
 from biblio.models import Usuarios, Roles, Libros, Prestamos, Bitacora, Libros
->>>>>>> feat-inventario
+
 
 # ---------- Helpers de sesión / roles ----------
 def _usuario_autenticado(request):
@@ -19,7 +19,7 @@ def _usuario_autenticado(request):
 
 def _obtener_rol_usuario(request):
     return request.session.get("rol_usuario")
-<<<<<<< HEAD
+
 
 
 # ESTA FUNCIÓN ES LA QUE FALTA O NO ESTÁ EN EL LUGAR CORRECTO
@@ -48,8 +48,7 @@ def requerir_rol(*roles_permitidos):
         return envoltura
     return decorador
 
-=======
->>>>>>> feat-inventario
+
 
 def requerir_rol(*roles_permitidos):
     """Redirige a login si no hay sesión o si el rol no está permitido."""
@@ -369,7 +368,7 @@ def inventario(request):
     return render(request, "seguridad/inventario.html", contexto)
 
 
-<<<<<<< HEAD
+
 # ---------- LÓGICA DE RESERVAS (CORREGIDA) ----------
 
 @requerir_cliente # Usamos el decorador para forzar la sesión de cliente
@@ -412,7 +411,7 @@ def solicitar_reserva(request, libro_pk):
     # Si llega un GET, lo tratamos como error (debería ser POST)
     messages.error(request, "Método inválido para realizar una reserva.")
     return redirect('ficha_libro', pk=libro_pk)
-=======
+
     
 
 from django.shortcuts import render, get_object_or_404
@@ -521,12 +520,11 @@ def registrar_prestamo(request):
         # Cambiar el estado del ejemplar a prestado
         ejemplar.estado = "prestado"
         ejemplar.save()
->>>>>>> feat-inventario
+
 
         messages.success(request, f"Préstamo registrado para {cliente.usuario.nombre} {cliente.usuario.apellido}")
         return redirect("registrar_prestamo")
 
-<<<<<<< HEAD
 # NUEVA VISTA: LISTADO DE RESERVAS DEL CLIENTE
 @requerir_cliente
 def listado_reservas_view(request):
@@ -584,9 +582,9 @@ def ficha_libro(request, pk):
         'ya_reservado': ya_reservado,
     }
     return render(request, 'catalogo/ficha_libro.html', contexto)
-=======
+
     return render(request, "seguridad/registrar_prestamo.html", {
         "clientes": clientes,
         "ejemplares": ejemplares,
     })
->>>>>>> feat-inventario
+
