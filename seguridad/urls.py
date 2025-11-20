@@ -10,7 +10,7 @@ urlpatterns = [
     path("empleados/inventario/",views.inventario, name="inventario")
 
     path("clientes/historial/", views.historial_cliente, name="historial_cliente"),
-    path("registro/prestamo/", views.registrar_prestamo, name= "")
+    path("registro/prestamo/", views.registrar_prestamo, name= "registrar_prestamo")
 
     
 ]
